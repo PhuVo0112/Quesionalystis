@@ -259,12 +259,4 @@ let quizData = [
       },
     ],
   },
-  {
-    id: "english",
-    name: "Tiếng Anh",
-    icon: "abc",
-    subTopics: [
-      /* ... */
-    ],
-  },
 ];

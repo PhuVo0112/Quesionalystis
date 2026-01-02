@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quesionalystis</title>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="../css/index_style.css" />
+  </head>
+  <body>
+    <header class="main-header">
+      <div class="logo-area">
+        <div class="logo-circle"></div>
+        <span class="logo-text">Quesionalystis</span>
+      </div>
+
+      <nav class="nav-icons">
+        <i class="ph ph-house" onclick="goBackHome()"></i>
+
+        <i
+          class="ph ph-upload-simple"
+          onclick="triggerUpload()"
+          title="Nạp dữ liệu"
+        ></i>
+
+        <i class="ph ph-magnifying-glass"></i>
+      </nav>
+    </header>
+
+    <input
+      type="file"
+      id="file-input"
+      accept=".json"
+      style="display: none"
+      onchange="handleFileSelect(event)"
+    />
+
+    <main class="app-container">
+      <div id="home-screen" class="screen active">
+        <h1 class="page-title">Chủ đề</h1>
+
+        <div id="category-grid" class="topic-grid"></div>
+      </div>
+
+      <div id="subtopic-screen" class="screen">
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+          "
+        >
+          <button class="btn-back" onclick="goBackHome()">
+            <i class="ph ph-arrow-left"></i> Quay lại
+          </button>
+        </div>
+
+        <h1 id="category-title" class="page-title">...</h1>
+
+        <div id="subtopic-grid" class="topic-grid"></div>
+      </div>
+
+      <div id="quiz-screen" class="screen">
+        <div class="header-bar">
+          <div class="timer">⏳ <span id="time-left">15</span>s</div>
+          <div class="score-board">Điểm: <span id="current-score">0</span></div>
+        </div>
+        <div class="question-box">
+          <h2 id="question-text">Câu hỏi...</h2>
+          <div id="options-container" class="options-grid"></div>
+        </div>
+      </div>
+
+      <div id="result-screen" class="screen">
+        <h2 class="page-title">Kết quả</h2>
+        <h1 id="final-score" style="font-size: 4rem; color: var(--text-color)">
+          0
+        </h1>
+        <button
+          class="btn-back"
+          onclick="goBackHome()"
+          style="margin: 20px auto"
+        >
+          🏠 Về trang chủ
+        </button>
+      </div>
+    </main>
+    <script src="../js/data.js"></script>
+    <script src="../js/script.js"></script>
+  </body>
+</html>

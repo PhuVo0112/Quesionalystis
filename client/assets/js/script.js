@@ -12,7 +12,7 @@ let currentQuestions = [];
 let currentQuestionIndex = 0;
 let score = 0;
 let timer;
-const TIME_PER_QUESTION = 15;
+const TIME_PER_QUESTION = 30;
 
 // --- 2. KHỞI TẠO ỨNG DỤNG (Màn hình trang chủ) ---
 function initApp() {
@@ -143,7 +143,7 @@ function checkAnswer(selectedIndex, correctIndex, btnElement) {
   }
 
   // Chuyển câu sau 1.5s
-  setTimeout(nextQuestion, 1500);
+  setTimeout(nextQuestion, 3000);
 }
 
 function nextQuestion() {
@@ -179,7 +179,7 @@ function handleTimeOut() {
   // Hiện đáp án đúng khi hết giờ
   allButtons[data.answer].classList.add("correct");
 
-  setTimeout(nextQuestion, 1500);
+  setTimeout(nextQuestion, 3000);
 }
 
 function endQuiz() {

@@ -153,7 +153,10 @@ body {
   border-radius: 12px;
   padding: 20px;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s,
+    border-color 0.2s;
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -275,5 +278,139 @@ body {
 @media (min-width: 600px) {
   .options-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* =========================================
+   7. CRITICAL FAILURE POPUP (Cảnh báo điểm liệt)
+   ========================================= */
+
+/* Lớp phủ mờ toàn màn hình */
+.critical-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  /* Màu nền đen mờ đậm để tập trung sự chú ý */
+  background-color: rgba(0, 0, 0, 0.85);
+  /* Z-index cao hơn Header (Header là 100) */
+  z-index: 110;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* Hiệu ứng làm mờ nền phía sau (kính mờ) */
+  backdrop-filter: blur(5px);
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Hộp nội dung thông báo */
+.critical-box {
+  background: white;
+  width: 90%;
+  max-width: 400px;
+  padding: 30px 20px;
+  border-radius: 15px;
+  text-align: center;
+  /* Đổ bóng sâu tạo cảm giác nổi */
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5);
+  /* Viền trên màu đỏ báo hiệu nguy hiểm */
+  border-top: 6px solid #d32f2f;
+  position: relative;
+  /* Animation rung lắc khi hiện ra */
+  animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* Icon (Đầu lâu hoặc dấu chấm than) */
+.critical-icon {
+  font-size: 60px;
+  margin-bottom: 15px;
+  line-height: 1;
+}
+
+/* Tiêu đề "SAI CÂU ĐIỂM LIỆT" */
+.critical-box h2 {
+  color: #d32f2f; /* Màu đỏ đậm */
+  font-family: var(--font-main);
+  font-size: 1.8rem;
+  margin: 0 0 10px 0;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+/* Đoạn văn mô tả */
+.critical-box p {
+  color: #333;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+/* Khung lý do hủy bài thi */
+.critical-reason {
+  background-color: #ffebee; /* Nền đỏ rất nhạt */
+  color: #b71c1c; /* Chữ đỏ đậm */
+  padding: 12px;
+  border-radius: 8px;
+  margin: 15px 0 20px 0 !important;
+  font-weight: 500;
+  border: 1px solid #ffcdd2;
+}
+
+/* Sửa lại đoạn này trong index_style.css */
+.critical-score {
+  font-size: 3rem; /* Tăng to hơn chút cho rõ */
+  font-weight: 800; /* Dùng độ đậm cao nhất thay cho font Impact */
+  color: #d32f2f;
+  margin-bottom: 25px;
+
+  /* --- DÒNG QUAN TRỌNG CẦN SỬA --- */
+  /* Bỏ var(--font-logo) đi vì Impact lỗi tiếng Việt */
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* Nút xác nhận */
+.btn-critical-confirm {
+  background-color: #d32f2f;
+  color: white;
+  border: none;
+  padding: 12px 35px;
+  font-size: 1.1rem;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: bold;
+  box-shadow: 0 4px 6px rgba(211, 47, 47, 0.3);
+}
+
+.btn-critical-confirm:hover {
+  background-color: #b71c1c;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(183, 28, 28, 0.4);
+}
+
+.btn-critical-confirm:active {
+  transform: translateY(1px);
+}
+
+/* Animation Rung lắc */
+@keyframes shake {
+  10%,
+  90% {
+    transform: translate3d(-1px, 0, 0);
+  }
+  20%,
+  80% {
+    transform: translate3d(2px, 0, 0);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translate3d(-4px, 0, 0);
+  }
+  40%,
+  60% {
+    transform: translate3d(4px, 0, 0);
   }
 }

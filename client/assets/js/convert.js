@@ -2,149 +2,142 @@ const fs = require("fs");
 const mammoth = require("mammoth");
 const cheerio = require("cheerio");
 
-// Cấu hình đường dẫn file
-const INPUT_FILE =
-  "Bộ 600 câu hỏi dành cho sát hạch lái xe cơ giới đường bộ.docx";
-const OUTPUT_FILE = "traffic_data.json";
+// --- CẤU HÌNH (CONFIG) ---
+const CONFIG = {
+  inputFile: "Bo_cau_hoi.docx",
+  outputFile: "data_output.json",
+
+  // Thông tin hiển thị trên App
+  topicId: "kien_thuc_chung",
+  topicName: "Kiến thức chung",
+  topicIcon: "📚",
+  subTopicId: "phan_1",
+  subTopicName: "Phần 1",
+
+  // Ký tự đánh dấu câu điểm liệt trong file Word
+  // Ví dụ: "Câu 1: [!] Hành vi nào..." -> isImportant = 1
+  criticalMarker: "[!]",
+};
 
 async function convertDocxToJson() {
   try {
-    console.log("Đang xử lý file Word... Vui lòng đợi.");
+    console.log(`> Đang xử lý: ${CONFIG.inputFile}...`);
 
-    // 1. Chuyển sang HTML (giữ thẻ strong/b để biết đáp án đúng)
+    // 1. Chuyển DOCX -> HTML
     const result = await mammoth.convertToHtml({
-      path: `D://SetUp//${INPUT_FILE}`,
+      path: `./${CONFIG.inputFile}`,
     });
-    const html = result.value;
+    const $ = cheerio.load(result.value);
 
-    // 2. Load HTML vào Cheerio
-    const $ = cheerio.load(html);
     const questions = [];
-    let currentQuestion = null;
+    let currentQ = null;
+    let ansIdx = -1; // Index tạm để check in đậm
 
-    // Regex nhận diện câu hỏi (Chấp nhận cả "Câu 1.", "Câu 1:", "Câu 1")
-    const questionRegex = /^\s*Câu\s+(\d+)[\.:]?\s*(.*)/i;
+    // Regex nhận diện
+    const rgxQ = /^\s*Câu\s+(\d+)[\.:]?\s*(.*)/i; // Khớp: "Câu 1: ..."
+    const rgxOpt = /^(.*)/; // Khớp: "1. Nội dung..."
 
-    // Regex nhận diện đáp án (Ví dụ: "1. Nội dung", "2. Nội dung")
-    const optionStartRegex = /^(\d+)\.\s+(.*)/;
-
-    // Lấy tất cả các thẻ có khả năng chứa text (đoạn văn, dòng trong list, ô trong bảng)
-    const elements = $("p, li, td, tr");
-
-    elements.each((index, element) => {
-      let text = $(element).text().replace(/\s+/g, " ").trim(); // Xóa khoảng trắng thừa
+    // Duyệt qua các thẻ text
+    $("p, li, td, tr").each((_, el) => {
+      let text = $(el).text().replace(/\s+/g, " ").trim();
       if (!text) return;
 
-      // --- A. XỬ LÝ CÂU HỎI ---
-      const qMatch = text.match(questionRegex);
-      if (qMatch) {
-        // Lưu câu hỏi cũ
-        if (currentQuestion) {
-          questions.push(currentQuestion);
+      // --- A. PARSE CÂU HỎI ---
+      const matchQ = text.match(rgxQ);
+      if (matchQ) {
+        // Đẩy câu trước đó vào mảng
+        if (currentQ) {
+          finalizeQ(currentQ, ansIdx);
+          questions.push(currentQ);
         }
 
-        // Tạo câu hỏi mới
-        currentQuestion = {
-          id: parseInt(qMatch[1]),
-          question: qMatch[2].trim(),
+        let rawContent = matchQ[2].trim();
+        let isImp = 0;
+
+        // Logic: Chỉ check thủ công theo marker người dùng nhập
+        // Mặc định là 0 nếu không thấy marker
+        if (rawContent.includes(CONFIG.criticalMarker)) {
+          isImp = 1;
+          // Xóa marker khỏi nội dung hiển thị
+          rawContent = rawContent.replace(CONFIG.criticalMarker, "").trim();
+        }
+
+        // Init object câu hỏi
+        currentQ = {
+          id: parseInt(matchQ[1]),
+          question: rawContent,
           options: [],
-          answer: 0,
+          answer: "",
+          isImportant: isImp,
         };
-        return; // Xong dòng này, sang dòng tiếp theo
+        ansIdx = -1;
+        return;
       }
 
-      // --- B. XỬ LÝ ĐÁP ÁN ---
-      if (currentQuestion) {
-        // Kiểm tra xem dòng này có phải là đáp án không (Bắt đầu bằng số "1.", "2.")
-        // Hoặc nếu dòng này chứa nhiều đáp án (VD: "1. A   2. B")
-
-        // Tách dòng thành các phần dựa trên số thứ tự (1. , 2. , 3. )
-        // Logic: Tìm các vị trí bắt đầu bằng "số + dấu chấm"
+      // --- B. PARSE ĐÁP ÁN ---
+      if (currentQ) {
+        // Xử lý trường hợp nhiều đáp án 1 dòng (VD: "1. A   2. B")
         const parts = text.split(/(?=\b\d+\.\s)/g);
+        let handled = false;
 
-        let isLineHandled = false;
+        for (let p of parts) {
+          p = p.trim();
+          const matchOpt = p.match(rgxOpt);
 
-        for (let part of parts) {
-          part = part.trim();
-          const optMatch = part.match(optionStartRegex);
+          if (matchOpt) {
+            handled = true;
+            currentQ.options.push(matchOpt[2].trim());
 
-          if (optMatch) {
-            isLineHandled = true;
-
-            // Kiểm tra in đậm (đáp án đúng)
-            // Lưu ý: Logic kiểm tra in đậm này áp dụng cho cả dòng.
-            // Nếu 1 dòng có 2 đáp án mà chỉ 1 cái in đậm thì mammoth có thể trả về cả dòng in đậm hoặc không.
-            // Đây là hạn chế khi tách dòng gộp, nhưng ta cứ check thẻ strong/b trong element gốc.
-            const isBold =
-              $(element).find("strong, b").length > 0 ||
-              $(element).is("strong, b");
-
-            const optionIndex = parseInt(optMatch[1]); // Số thứ tự đáp án trong text (1, 2...)
-
-            // Thêm vào danh sách options
-            // Lưu ý: Ta format lại chuỗi cho đẹp
-            currentQuestion.options.push(part);
-
-            // Nếu in đậm -> set index đáp án đúng (lấy index theo mảng 0-based)
-            if (isBold) {
-              // Vì optionIndex là số trong text (ví dụ 1, 2), nhưng mảng bắt đầu từ 0
-              // Ta map dựa trên số lượng options hiện có
-              currentQuestion.answer = currentQuestion.options.length - 1;
+            // Check in đậm -> Đáp án đúng
+            if ($(el).find("strong, b").length || $(el).is("strong, b")) {
+              ansIdx = currentQ.options.length - 1;
             }
           }
         }
 
-        // --- C. XỬ LÝ NỐI DÒNG (FIX LỖI MẤT CHỮ) ---
-        // Nếu dòng này KHÔNG phải câu hỏi, KHÔNG phải bắt đầu bằng "1.", "2."
-        // Thì nó là phần tiếp theo của câu hỏi hoặc đáp án trước đó bị xuống dòng.
-        if (!isLineHandled) {
-          // Nếu chưa có options nào -> Nối vào câu hỏi
-          if (currentQuestion.options.length === 0) {
-            currentQuestion.question += " " + text;
-          }
-          // Nếu đã có options -> Nối vào option cuối cùng
-          else {
-            let lastOptIdx = currentQuestion.options.length - 1;
-            currentQuestion.options[lastOptIdx] += " " + text;
-          }
+        // --- C. FIX LỖI XUỐNG DÒNG ---
+        // Nối text vào phần tử cuối cùng nếu không phải option mới
+        if (!handled) {
+          if (currentQ.options.length === 0) currentQ.question += " " + text;
+          else currentQ.options[currentQ.options.length - 1] += " " + text;
         }
       }
     });
 
-    // Lưu câu cuối cùng
-    if (currentQuestion) {
-      questions.push(currentQuestion);
+    // Đẩy câu cuối cùng
+    if (currentQ) {
+      finalizeQ(currentQ, ansIdx);
+      questions.push(currentQ);
     }
 
-    // Tạo cấu trúc JSON cuối cùng
-    const finalJson = {
-      id: "traffic",
-      name: "Luật Giao thông",
-      icon: "🚦",
+    // Build JSON cuối cùng
+    const output = {
+      id: CONFIG.topicId,
+      name: CONFIG.topicName,
+      icon: CONFIG.topicIcon,
       subTopics: [
-        {
-          id: "a1",
-          name: "Bằng A1",
-          questions: questions,
-        },
+        { id: CONFIG.subTopicId, name: CONFIG.subTopicName, questions },
       ],
     };
 
-    // Ghi file (Bắt buộc dùng encoding utf8)
-    fs.writeFileSync(OUTPUT_FILE, JSON.stringify(finalJson, null, 2), {
-      encoding: "utf8",
-    });
-
-    console.log("---------------------------------------------------");
-    console.log(`✅ Đã xong! Tổng số câu hỏi lấy được: ${questions.length}`);
-    console.log(`📁 File kết quả: ${OUTPUT_FILE}`);
-    console.log(
-      "👉 Mẹo: Hãy mở file JSON bằng VS Code hoặc Notepad++ để không bị lỗi font tiếng Việt."
+    // Ghi file
+    fs.writeFileSync(
+      CONFIG.outputFile,
+      JSON.stringify(output, null, 2),
+      "utf8",
     );
-    console.log("---------------------------------------------------");
-  } catch (error) {
-    console.error("❌ Lỗi:", error);
+    console.log(
+      `> Hoàn tất. Output: ${CONFIG.outputFile} (${questions.length} câu)`,
+    );
+  } catch (e) {
+    console.error("> Lỗi:", e);
   }
+}
+
+// Helper: Map index đúng sang string
+function finalizeQ(q, idx) {
+  // Nếu có index in đậm -> lấy text, ngược lại rỗng
+  q.answer = idx !== -1 && q.options[idx] ? q.options[idx] : "";
 }
 
 convertDocxToJson();
